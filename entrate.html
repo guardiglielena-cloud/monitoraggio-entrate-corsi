@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoraggio Entrate Corsi</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const PlusIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+        );
+
+        const Edit2Icon = () => (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+            </svg>
+        );
+
+        const Trash2Icon = () => (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+        );
+
+        const ChevronDownIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        );
+
+        const ChevronUpIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="18 15 12 9 6 15"></polyline>
+            </svg>
+        );
+
+        const XIcon = () => (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        );
+
+        const STORAGE_KEY = 'training-courses';
+        const MONTHS = [
+            'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+            'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+        ];
+
+        const TrainingIncomeTracker = () => {
+            const [courses, setCourses] = useState([]);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [editingCourse, setEditingCourse] = useState(null);
+            const [expandedMonth, setExpandedMonth] = useState(null);
+            const [deleteConfirm, setDeleteConfirm] = useState(null);
+            const [formData, setFormData] = useState({
+                name: '',
+                entity: '',
+                amount: '',
+                date: '',
+                paymentMonth: '',
+                paymentYear: ''
+            });
+
+            useEffect(() => {
+                loadCourses();
+            }, []);
+
+            const loadCourses = () => {
+                try {
+                    const saved = localStorage.getItem(STORAGE_KEY);
+                    if (saved) {
+                        setCourses(JSON.parse(saved));
+                    }
+                } catch (error) {
+                    console.log('Nessun dato salvato trovato');
+                }
+            };
+
+            const saveCourses = (updatedCourses) => {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedCourses));
+                    setCourses(updatedCourses);
+                } catch (error) {
+                    console.error('Errore nel salvataggio:', error);
+                    alert('Errore nel salvataggio dei dati');
+                }
+            };
+
+            const openModal = (course = null) => {
+                if (course) {
+                    setEditingCourse(course);
+                    setFormData({
+                        name: course.name,
+                        entity: course.entity,
+                        amount: course.amount.toString(),
+                        date: course.date,
+                        paymentMonth: course.paymentMonth,
+                        paymentYear: course.paymentYear
+                    });
+                } else {
+                    setEditingCourse(null);
+                    setFormData({
+                        name: '',
+                        entity: '',
+                        amount: '',
+                        date: '',
+                        paymentMonth: '',
+                        paymentYear: ''
+                    });
+                }
+                setIsModalOpen(true);
+            };
+
+            const closeModal = () => {
+                setIsModalOpen(false);
+                setEditingCourse(null);
+                setFormData({
+                    name: '',
+                    entity: '',
+                    amount: '',
+                    date: '',
+                    paymentMonth: '',
+                    paymentYear: ''
+                });
+            };
+
+            const handleSubmit = () => {
+                if (!formData.name || !formData.entity || !formData.amount || !formData.date || !formData.paymentMonth || !formData.paymentYear) {
+                    alert('Tutti i campi sono obbligatori');
+                    return;
+                }
+
+                const courseData = {
+                    id: editingCourse ? editingCourse.id : Date.now(),
+                    name: formData.name,
+                    entity: formData.entity,
+                    amount: parseFloat(formData.amount),
+                    date: formData.date,
+                    paymentMonth: formData.paymentMonth,
+                    paymentYear: formData.paymentYear
+                };
+
+                let updatedCourses;
+                if (editingCourse) {
+                    updatedCourses = courses.map(c => c.id === editingCourse.id ? courseData : c);
+                } else {
+                    updatedCourses = [...courses, courseData];
+                }
+
+                saveCourses(updatedCourses);
+                closeModal();
+            };
+
+            const handleDelete = (courseId) => {
+                const updatedCourses = courses.filter(c => c.id !== courseId);
+                saveCourses(updatedCourses);
+                setDeleteConfirm(null);
+            };
+
+            const generateMonthsList = () => {
+                const monthsList = [];
+                for (let i = 9; i < 12; i++) {
+                    monthsList.push({ month: i, year: 2025 });
+                }
+                for (let i = 0; i < 12; i++) {
+                    monthsList.push({ month: i, year: 2026 });
+                }
+                return monthsList;
+            };
+
+            const getCoursesForMonth = (month, year) => {
+                return courses.filter(c => 
+                    parseInt(c.paymentMonth) === month && parseInt(c.paymentYear) === year
+                );
+            };
+
+            const getTotalForMonth = (month, year) => {
+                return getCoursesForMonth(month, year).reduce((sum, c) => sum + c.amount, 0);
+            };
+
+            const getTotalForYear = (year) => {
+                return courses
+                    .filter(c => parseInt(c.paymentYear) === year)
+                    .reduce((sum, c) => sum + c.amount, 0);
+            };
+
+            const toggleMonth = (month, year) => {
+                const key = `${year}-${month}`;
+                setExpandedMonth(expandedMonth === key ? null : key);
+            };
+
+            const monthsList = generateMonthsList();
+            const total2025 = getTotalForYear(2025);
+            const total2026 = getTotalForYear(2026);
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-6">
+                    <div className="max-w-4xl mx-auto">
+                        <div className="mb-6">
+                            <h1 className="text-3xl font-bold text-gray-800 mb-6">Entrate Corsi di Formazione</h1>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                                <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
+                                    <div className="text-sm text-gray-600 mb-1">Totale 2025</div>
+                                    <div className="text-3xl font-bold text-blue-600">€{total2025.toLocaleString('it-IT')}</div>
+                                </div>
+                                <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-indigo-500">
+                                    <div className="text-sm text-gray-600 mb-1">Totale 2026</div>
+                                    <div className="text-3xl font-bold text-indigo-600">€{total2026.toLocaleString('it-IT')}</div>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => openModal()}
+                                className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
+                            >
+                                <PlusIcon />
+                                Aggiungi Corso
+                            </button>
+                        </div>
+
+                        <div className="space-y-3">
+                            {monthsList.map(({ month, year }) => {
+                                const monthCourses = getCoursesForMonth(month, year);
+                                const total = getTotalForMonth(month, year);
+                                const isExpanded = expandedMonth === `${year}-${month}`;
+
+                                return (
+                                    <div key={`${year}-${month}`} className="bg-white rounded-lg shadow-md overflow-hidden">
+                                        <button
+                                            onClick={() => toggleMonth(month, year)}
+                                            className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <span className="font-semibold text-gray-800">
+                                                    {MONTHS[month]} {year}
+                                                </span>
+                                                {monthCourses.length > 0 && (
+                                                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm">
+                                                        {monthCourses.length} {monthCourses.length === 1 ? 'corso' : 'corsi'}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <span className={`font-bold text-lg ${total > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                                                    €{total.toLocaleString('it-IT')}
+                                                </span>
+                                                {isExpanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
+                                            </div>
+                                        </button>
+
+                                        {isExpanded && monthCourses.length > 0 && (
+                                            <div className="border-t border-gray-200 bg-gray-50 px-6 py-4">
+                                                <div className="space-y-3">
+                                                    {monthCourses.map(course => (
+                                                        <div key={course.id} className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                                                            <div className="flex justify-between items-start mb-2">
+                                                                <div className="flex-1">
+                                                                    <h3 className="font-semibold text-gray-800 text-lg">{course.name}</h3>
+                                                                    <p className="text-gray-600 text-sm">{course.entity}</p>
+                                                                </div>
+                                                                <div className="flex gap-2 ml-4">
+                                                                    <button
+                                                                        onClick={() => openModal(course)}
+                                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                                        title="Modifica"
+                                                                    >
+                                                                        <Edit2Icon />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => setDeleteConfirm(course.id)}
+                                                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                                        title="Elimina"
+                                                                    >
+                                                                        <Trash2Icon />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex justify-between items-center text-sm mt-3 pt-3 border-t border-gray-100">
+                                                                <span className="text-gray-600">Data corso: {course.date}</span>
+                                                                <span className="font-bold text-green-600 text-lg">€{course.amount.toLocaleString('it-IT')}</span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {isModalOpen && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                            <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+                                    <h2 className="text-xl font-bold text-gray-800">
+                                        {editingCourse ? 'Modifica Corso' : 'Aggiungi Nuovo Corso'}
+                                    </h2>
+                                    <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
+                                        <XIcon />
+                                    </button>
+                                </div>
+
+                                <div className="p-6 space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome del corso *</label>
+                                        <input
+                                            type="text"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="Es. Corso Excel Avanzato"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Ente di formazione *</label>
+                                        <input
+                                            type="text"
+                                            value={formData.entity}
+                                            onChange={(e) => setFormData({ ...formData, entity: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="Es. Ente Formazione XYZ"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Importo (€) *</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            value={formData.amount}
+                                            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="Es. 1500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Data corso *</label>
+                                        <input
+                                            type="text"
+                                            value={formData.date}
+                                            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="Es. 15-16 Marzo 2026"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Mese di pagamento *</label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <select
+                                                value={formData.paymentMonth}
+                                                onChange={(e) => setFormData({ ...formData, paymentMonth: e.target.value })}
+                                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            >
+                                                <option value="">Seleziona mese</option>
+                                                {MONTHS.map((month, idx) => (
+                                                    <option key={idx} value={idx}>{month}</option>
+                                                ))}
+                                            </select>
+                                            <select
+                                                value={formData.paymentYear}
+                                                onChange={(e) => setFormData({ ...formData, paymentYear: e.target.value })}
+                                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            >
+                                                <option value="">Seleziona anno</option>
+                                                <option value="2025">2025</option>
+                                                <option value="2026">2026</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-3 pt-4">
+                                        <button
+                                            type="button"
+                                            onClick={closeModal}
+                                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                                        >
+                                            Annulla
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleSubmit}
+                                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                        >
+                                            {editingCourse ? 'Salva Modifiche' : 'Aggiungi Corso'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {deleteConfirm && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                            <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
+                                <h3 className="text-lg font-bold text-gray-800 mb-3">Conferma eliminazione</h3>
+                                <p className="text-gray-600 mb-6">Sei sicura di voler cancellare questo corso?</p>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setDeleteConfirm(null)}
+                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                                    >
+                                        Annulla
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(deleteConfirm)}
+                                        className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                                    >
+                                        Elimina
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<TrainingIncomeTracker />, document.getElementById('root'));
+    </script>
+</body>
+</html>
